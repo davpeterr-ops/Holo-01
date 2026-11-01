@@ -4,24 +4,32 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     scripts:
-      - name: Prepare Android project
+      - name: Prepare corrected Android project
         script: |
-          set -e
-          unzip -o HOLO-01-cloud-build.zip
+          set -euxo pipefail
+          echo "Repository files:"
+          ls -la
+          test -f HOLO-01-cloud-build-fixed.zip
+          rm -rf HOLO-01-native
+          unzip -q HOLO-01-cloud-build-fixed.zip
+          test -f HOLO-01-native/app/src/main/res/values/strings.xml
+          grep -F 'android:description="@string/accessibility_service_description"' HOLO-01-native/app/src/main/res/xml/accessibility_service_config.xml
+          ! grep -F 'android:description="Allows HOLO.01' HOLO-01-native/app/src/main/res/xml/accessibility_service_config.xml
           cd HOLO-01-native
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
       - name: Install Android SDK packages
         script: |
-          set -e
+          set -euxo pipefail
           export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Install Gradle 8.9 and build APK
         script: |
-          set -e
-          curl -L https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle-8.9-bin.zip
+          set -euxo pipefail
+          curl -fL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle-8.9-bin.zip
           unzip -q /tmp/gradle-8.9-bin.zip -d /tmp
           cd HOLO-01-native
-          /tmp/gradle-8.9/bin/gradle --no-daemon assembleDebug
+          /tmp/gradle-8.9/bin/gradle --no-daemon clean assembleDebug
     artifacts:
       - HOLO-01-native/app/build/outputs/apk/debug/app-debug.apk
+      
