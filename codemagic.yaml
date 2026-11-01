@@ -1,0 +1,27 @@
+workflows:
+  holo01-android-debug:
+    name: HOLO.01 Android APK
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    scripts:
+      - name: Prepare Android project
+        script: |
+          set -e
+          unzip -o HOLO-01-cloud-build.zip
+          cd HOLO-01-native
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+      - name: Install Android SDK packages
+        script: |
+          set -e
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Gradle 8.9 and build APK
+        script: |
+          set -e
+          curl -L https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle-8.9-bin.zip
+          unzip -q /tmp/gradle-8.9-bin.zip -d /tmp
+          cd HOLO-01-native
+          /tmp/gradle-8.9/bin/gradle --no-daemon assembleDebug
+    artifacts:
+      - HOLO-01-native/app/build/outputs/apk/debug/app-debug.apk
